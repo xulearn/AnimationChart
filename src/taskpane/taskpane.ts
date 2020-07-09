@@ -12,6 +12,8 @@ let activeTableId;
 let inputPointItems: any;
 let orientation: number;
 
+let pointItemsCount: number;
+
 //for original table
 let totalColumnCount: number;
 let totalRowCount: number;
@@ -21,6 +23,11 @@ let lineChartName = "LineChartName";
 let linePointSetLabel;
 let linePointUnsetLabel;
 // let seriesUpdate;
+
+//for barChart
+//todo
+let toolTableName = "toolTable"; //+UUID
+let toolSheetName = "toolSheet"; //+UUID
 
 //--------------------------------
 // Parameters. Modify it if needed.
@@ -227,9 +234,11 @@ export async function CreateBarChart() {
       totalColumnCount = wholeRange.columnCount;
       totalRowCount = wholeRange.rowCount;
 
-      //create toolTable
-      let toolRange = dataSheet.getCell(0, totalColumnCount + 1).getAbsoluteResizedRange(totalRowCount, 4);
-      let toolTable = dataSheet.tables.add(toolRange, true);
+      //create toolTable  //todo : toolSheet下toolTable赋值问题！！！
+      let toolSheet = context.workbook.worksheets.add(toolSheetName);
+      // let toolRange = dataSheet.getCell(0, totalColumnCount + 1).getAbsoluteResizedRange(totalRowCount, 4);
+      let toolRange = toolSheet.getCell(0, 0).getAbsoluteResizedRange(totalRowCount, 4);
+      let toolTable = toolSheet.tables.add(toolRange, true);
       toolTable.set({
         name: "toolTable"
       });
@@ -243,23 +252,28 @@ export async function CreateBarChart() {
       let categoryBodyRange = toolTable.columns.getItem("categoryColumn").getDataBodyRange();
       let curIteratedRange = toolTable.columns.getItemAt(1).getRange();
       let curIteratedBodyRange = toolTable.columns.getItemAt(1).getDataBodyRange();
-      let colorRange = toolTable.columns.getItem("colorColumn").getRange();
-      let mapRange = toolTable.columns.getItem("mapColumn").getRange();
+      let colorBodyRange = toolTable.columns.getItem("colorColumn").getDataBodyRange();
+      let mapBodyRange = toolTable.columns.getItem("mapColumn").getDataBodyRange();
 
       //copy Range
       categoryBodyRange.copyFrom(table.columns.getItemAt(0).getDataBodyRange());
       curIteratedRange.copyFrom(table.columns.getItemAt(1).getRange()); //copy headers too
-      colorRange.load("values");
+      
+      colorBodyRange.load("values");
       await context.sync();
-      for (let i = 1; i < totalRowCount; ++i) {
-        //填补colorRange，
-        colorRange.getCell(i, 0).values = [[colorList[(i - 1) % colorList.length]]]; //只通过cell赋值,且一次sync之后就要赋值
+      let tmpColorArr = [];
+      for(let i = 0;i<totalRowCount-1;++i){
+        tmpColorArr.push([colorList[(i) % colorList.length]]);
       }
-      mapRange.load("values");
+      colorBodyRange.values = tmpColorArr;
+
+      mapBodyRange.load("values");
       await context.sync();
+      let tmpMapArr = [];
       for (let i = 1; i < totalRowCount; ++i) {
-        mapRange.getCell(i, 0).values = [[i]];
+        tmpMapArr.push([i]);
       }
+      mapBodyRange.values = tmpMapArr;
 
       //input
       let inputElement = document.getElementById("PointItems") as HTMLInputElement;
@@ -269,17 +283,13 @@ export async function CreateBarChart() {
       console.log(orientation);
 
       //get input and target items
-      let pointItemsCount = formatInput(inputPointItems, totalRowCount);
+      pointItemsCount = formatInput(inputPointItems, totalRowCount);
 
       let targetIteratedBodyRange = getPartialRange(curIteratedBodyRange,pointItemsCount,orientation); 
       let targetCategoryRange = getPartialRange(categoryBodyRange,pointItemsCount,orientation); 
 
       // Create Chart
-      // if(orientation === 1){  //for top n
-        toolTable.sort.apply([{ key: 1, ascending: true }], true);  //toolTable only does ascending sort
-      // }else{  //for bottom n
-      //   toolTable.sort.apply([{ key: 1, ascending: true }], true);
-      // }
+      toolTable.sort.apply([{ key: 1, ascending: true }], true);  //toolTable only does ascending sort
       // let barChart = dataSheet.charts.add(Excel.ChartType.barClustered, curIteratedBodyRange);
       let barChart = dataSheet.charts.add(Excel.ChartType.barClustered, targetIteratedBodyRange);
 
@@ -308,14 +318,21 @@ export async function CreateBarChart() {
       series.points.load();
       await context.sync();
 
+      colorBodyRange.load("values");
+      await context.sync();
+      let sortedColorArr = colorBodyRange.values;
+
       // Set data points color
       for (let i = 0; i < series.points.count; i++) {
-        series.points.getItemAt(i).format.fill.setSolidColor(colorList[i % colorList.length]);
+        // series.points.getItemAt(i).format.fill.setSolidColor(colorList[i % colorList.length]);
+        if(orientation === 1){
+          series.points.getItemAt(i).format.fill.setSolidColor(sortedColorArr[totalRowCount-pointItemsCount-1+i][0]);
+        }else{
+          series.points.getItemAt(i).format.fill.setSolidColor(sortedColorArr[i][0]);
+        }
+
       }
       series.points.load();
-
-      //hide the Range of toolTable
-      // toolRange.set({ columnHidden: true });
 
       await context.sync();
     });
@@ -362,12 +379,6 @@ export async function PlayBarChart() {
         countryArray.push(curCountry);
       }
 
-      //test
-      // for(let i=0;i<totalRowCount-1;++i){
-      //   console.log(countryArray[i].color);
-      // }
-
-
       // paly
       for (let i = 2; i < totalColumnCount; ++i) {
         let nextIteratedHeaderRange = table.columns.getItemAt(i).getHeaderRowRange(); //from table
@@ -413,11 +424,7 @@ export async function PlayBarChart() {
           }
 
           //sort
-          // if(orientation === 1){  //for top n
-          //   countryArray.sort((a: Country, b: Country) => b.value - a.value);
-          // }else{  //for bottom n
             countryArray.sort((a: Country, b: Country) => a.value - b.value); //countryArray only does ascending sort
-          // }
 
           //set some value to excel Range
           let categoryArray = [];
@@ -434,7 +441,6 @@ export async function PlayBarChart() {
           curIteratedBodyRange.values = valueArray;
           mapBodyRange.values = mapArray;
           colorBodyRange.values = colorArray;
-
           await context.sync();
 
           // Set data points color
@@ -442,10 +448,17 @@ export async function PlayBarChart() {
           series.load("points");
           colorBodyRange.load("values");
           await context.sync();
-          for (let k = 0; k < series.points.count; k++) {   //todo：要调整适应top n和bottom n
-            series.points.getItemAt(k).format.fill.setSolidColor(colorBodyRange.values[k][0]);
+          let tmpColorArr = colorBodyRange.values;
+          for (let k = 0; k < series.points.count; k++) {   
+            // series.points.getItemAt(k).format.fill.setSolidColor(colorBodyRange.values[k][0]);
+            if(orientation === 1){
+              console.log(totalRowCount-pointItemsCount-1+k);
+              series.points.getItemAt(k).format.fill.setSolidColor(tmpColorArr[totalRowCount-pointItemsCount-1+k][0]);
+            }else{
+              series.points.getItemAt(k).format.fill.setSolidColor(tmpColorArr[k][0]);
+            }
           }
-
+          series.points.load();
           await context.sync();
         }
 
