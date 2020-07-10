@@ -6,8 +6,6 @@
 /* global console, document, Excel, Office */
 
 // Internal used const. DO NOT CHANGE
-// const chartName = "DynamicChart";
-
 let activeTableId;
 let inputPointItems: any;
 let orientation: number;
@@ -23,11 +21,6 @@ let lineChartName = "LineChartName";
 let linePointSetLabel;
 let linePointUnsetLabel;
 // let seriesUpdate;
-
-//for barChart
-//todo
-let toolTableName = "toolTable"; //+UUID
-let toolSheetName = "toolSheet"; //+UUID
 
 //--------------------------------
 // Parameters. Modify it if needed.
@@ -59,7 +52,29 @@ const fontSize_Title = 28,
   fontSize_DataLabel = 13;
 
 // Internal used const. DO NOT CHANGE
+//for barChart and columnChart and tool
+const toolSheetName = "toolSheet"; //+UUID
+const toolTableName = "toolTable"; //+UUID
+
 const barChartName = "BarChartName";
+const columnChartName = "ColumnChartName";
+
+const barChartFlag = 1;
+const columnChartFlag = 2;
+
+enum ToolTableColumnIndex {
+  category = 0,
+  value = 1,
+  color = 2,
+  map = 3
+}
+
+enum ToolTableColumnName {
+  category = "categoryColumn",
+  //value
+  color = "colorColumn",
+  map = "mapColumn"
+}
 
 Office.onReady(info => {
   if (info.host === Office.HostType.Excel) {
@@ -71,6 +86,9 @@ Office.onReady(info => {
     //bar chart
     document.getElementById("createBarChart").onclick = CreateBarChart;
     document.getElementById("playBarChart").onclick = PlayBarChart;
+    //column chart
+    document.getElementById("createColumnChart").onclick = CreateColumnChart;
+    document.getElementById("playColumnChart").onclick = PlayColumnChart;
   }
 });
 
@@ -103,7 +121,7 @@ export async function CreateLineChart() {
 
       //get initial range, at least one category column and two data columns
       let initialCell = table.getRange().getCell(0, 0);
-      let initialRange = initialCell.getAbsoluteResizedRange(totalRowCount, 3); //不是偏移，而是写要的绝对量
+      let initialRange = initialCell.getAbsoluteResizedRange(totalRowCount, 3); //It's not an offset, it's an absolute amount .
       //if the category sorted by columns
       let initalCategoryName = table
         .getRange()
@@ -117,10 +135,6 @@ export async function CreateLineChart() {
       let categoryAxis = lineChart.axes.getItem(Excel.ChartAxisType.category);
       categoryAxis.setCategoryNames(initalCategoryName);
 
-      //set serie label
-      // seriesUpdate = {
-      //   smooth : true
-      // };
       let setLabel = {
         showSeriesName: true,
         showValue: true,
@@ -137,7 +151,8 @@ export async function CreateLineChart() {
         dataLabel: unsetLabel
       };
       for (let i = totalRowCount - 2; i >= 0; --i) {
-        //getItem(1):初始两列，只显示最右一列; totalRowCount - 2:series从0计数，totalRowCount从1技术
+        //getItem(1):The first two columns, only the rightmost column is displayed.
+        //totalRowCount - 2:series counts from 0, totalRowCount counts from 1.
         lineChart.series
           .getItemAt(i)
           .points.getItemAt(1)
@@ -164,16 +179,17 @@ export async function PlayLineChart() {
 
       //get initial range, at least one category column and two data columns
       let initialCell = table.getRange().getCell(0, 0);
-      let initialRange = initialCell.getAbsoluteResizedRange(totalRowCount, 3); //不是偏移，而是写要的绝对量
+      let initialRange = initialCell.getAbsoluteResizedRange(totalRowCount, 3); //It's not an offset, it's an absolute amount .
       let initalCategoryName = table
         .getRange()
         .getCell(0, 1)
         .getAbsoluteResizedRange(1, 2);
 
-      for (let i = 4; i < totalColumnCount; ++i) {
+      for (let i = 4; i <= totalColumnCount; ++i) {
+        //todo!!
         //from the forth column
 
-        let resizedRange = initialRange.getAbsoluteResizedRange(totalRowCount, i); //向右平移一个列单位
+        let resizedRange = initialRange.getAbsoluteResizedRange(totalRowCount, i); //Translate one column unit to the right.
 
         //todo: do not use sleep
         sleep(1000);
@@ -188,7 +204,7 @@ export async function PlayLineChart() {
           lineChart.series
             .getItemAt(j)
             .points.getItemAt(i - 3)
-            .set(linePointUnsetLabel); //getItemAt(i - 3): pionts从0开始计数
+            .set(linePointUnsetLabel); //getItemAt(i - 3): pionts count from 0.
         }
         await context.sync();
 
@@ -213,6 +229,28 @@ export async function PlayLineChart() {
  */
 export async function CreateBarChart() {
   try {
+    await CreateBarOrColumnChart(barChartFlag);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+/**
+ * create for column chart
+ */
+export async function CreateColumnChart() {
+  try {
+    await CreateBarOrColumnChart(columnChartFlag);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+/**
+ * create for bar or column chart
+ */
+export async function CreateBarOrColumnChart(flag: number) {
+  try {
     await Excel.run(async context => {
       // Find selected table
       const activeRange = context.workbook.getSelectedRange();
@@ -223,7 +261,7 @@ export async function CreateBarChart() {
       // Get active table
       let dataTable = dataTables.items[0];
       let dataSheet = context.workbook.worksheets.getActiveWorksheet();
-      activeTableId = dataTable.id; //id不能load！！！
+      activeTableId = dataTable.id; //id can not be loaded
       let table = dataSheet.tables.getItem(activeTableId);
       await context.sync();
 
@@ -234,36 +272,57 @@ export async function CreateBarChart() {
       totalColumnCount = wholeRange.columnCount;
       totalRowCount = wholeRange.rowCount;
 
-      //create toolTable  //todo : toolSheet下toolTable赋值问题！！！
-      let toolSheet = context.workbook.worksheets.add(toolSheetName);
-      // let toolRange = dataSheet.getCell(0, totalColumnCount + 1).getAbsoluteResizedRange(totalRowCount, 4);
+      //create toolTable
+      //delete the old chart and sheet
+      let toolSheet: Excel.Worksheet;
+      toolSheet = context.workbook.worksheets.getItemOrNullObject(toolSheetName);
+      toolSheet.load();
+      await context.sync();
+      let lastBarChart: Excel.Chart;
+      let lastColumnChart: Excel.Chart;
+
+      if (JSON.stringify(toolSheet) !== "{}") {
+        lastBarChart = dataSheet.charts.getItemOrNullObject(barChartName);
+        lastColumnChart = dataSheet.charts.getItemOrNullObject(columnChartName);
+        //chart delete
+        lastBarChart.load();
+        lastColumnChart.load();
+        await context.sync();
+        if (JSON.stringify(lastBarChart) !== "{}") {
+          lastBarChart.delete();
+        }
+        if (JSON.stringify(lastColumnChart) !== "{}") {
+          lastColumnChart.delete();
+        }
+        toolSheet.delete();
+      }
+      toolSheet = context.workbook.worksheets.add(toolSheetName);
+
       let toolRange = toolSheet.getCell(0, 0).getAbsoluteResizedRange(totalRowCount, 4);
       let toolTable = toolSheet.tables.add(toolRange, true);
       toolTable.set({
-        name: "toolTable"
+        name: toolTableName
       });
       //set columnName
-      toolTable.columns.getItemAt(0).set({ name: "categoryColumn" });
-      // toolTable.columns.getItemAt(1).set({ name: "curIteratedColumn" });
-      toolTable.columns.getItemAt(2).set({ name: "colorColumn" });
-      toolTable.columns.getItemAt(3).set({ name: "mapColumn" });
-      // toolTable.columns.getItemAt(4).set({name: "increaseColumn"});  //increase不用了
+      toolTable.columns.getItemAt(ToolTableColumnIndex.category).set({ name: ToolTableColumnName.category });
+      toolTable.columns.getItemAt(ToolTableColumnIndex.color).set({ name: ToolTableColumnName.color });
+      toolTable.columns.getItemAt(ToolTableColumnIndex.map).set({ name: ToolTableColumnName.map });
 
-      let categoryBodyRange = toolTable.columns.getItem("categoryColumn").getDataBodyRange();
-      let curIteratedRange = toolTable.columns.getItemAt(1).getRange();
-      let curIteratedBodyRange = toolTable.columns.getItemAt(1).getDataBodyRange();
-      let colorBodyRange = toolTable.columns.getItem("colorColumn").getDataBodyRange();
-      let mapBodyRange = toolTable.columns.getItem("mapColumn").getDataBodyRange();
+      let categoryBodyRange = toolTable.columns.getItem(ToolTableColumnName.category).getDataBodyRange();
+      let curIteratedRange = toolTable.columns.getItemAt(ToolTableColumnIndex.value).getRange();
+      let curIteratedBodyRange = toolTable.columns.getItemAt(ToolTableColumnIndex.value).getDataBodyRange();
+      let colorBodyRange = toolTable.columns.getItem(ToolTableColumnName.color).getDataBodyRange();
+      let mapBodyRange = toolTable.columns.getItem(ToolTableColumnName.map).getDataBodyRange();
 
       //copy Range
       categoryBodyRange.copyFrom(table.columns.getItemAt(0).getDataBodyRange());
       curIteratedRange.copyFrom(table.columns.getItemAt(1).getRange()); //copy headers too
-      
+
       colorBodyRange.load("values");
       await context.sync();
       let tmpColorArr = [];
-      for(let i = 0;i<totalRowCount-1;++i){
-        tmpColorArr.push([colorList[(i) % colorList.length]]);
+      for (let i = 0; i < totalRowCount - 1; ++i) {
+        tmpColorArr.push([colorList[i % colorList.length]]);
       }
       colorBodyRange.values = tmpColorArr;
 
@@ -280,38 +339,41 @@ export async function CreateBarChart() {
       inputPointItems = inputElement.value;
       let optionElement = document.getElementById("orientation") as HTMLOptionElement;
       orientation = Number(optionElement.value);
-      console.log(orientation);
 
       //get input and target items
       pointItemsCount = formatInput(inputPointItems, totalRowCount);
 
-      let targetIteratedBodyRange = getPartialRange(curIteratedBodyRange,pointItemsCount,orientation); 
-      let targetCategoryRange = getPartialRange(categoryBodyRange,pointItemsCount,orientation); 
+      let targetIteratedBodyRange = getPartialRange(curIteratedBodyRange, pointItemsCount, orientation);
+      let targetCategoryRange = getPartialRange(categoryBodyRange, pointItemsCount, orientation);
 
       // Create Chart
-      toolTable.sort.apply([{ key: 1, ascending: true }], true);  //toolTable only does ascending sort
-      // let barChart = dataSheet.charts.add(Excel.ChartType.barClustered, curIteratedBodyRange);
-      let barChart = dataSheet.charts.add(Excel.ChartType.barClustered, targetIteratedBodyRange);
+      toolTable.sort.apply([{ key: 1, ascending: true }], true); //toolTable only does ascending sort
+      let chart: Excel.Chart;
+      if (flag === barChartFlag) {
+        chart = dataSheet.charts.add(Excel.ChartType.barClustered, targetIteratedBodyRange);
+        chart.set({ name: barChartName, height: chartHeight, width: chartWidth, left: chartLeft, top: chartTop });
+      } else {
+        chart = dataSheet.charts.add(Excel.ChartType.columnClustered, targetIteratedBodyRange);
+        chart.set({ name: columnChartName, height: chartHeight, width: chartWidth, left: chartLeft, top: chartTop });
+      }
 
-
-      barChart.set({ name: barChartName, height: chartHeight, width: chartWidth, left: chartLeft, top: chartTop });
       let curheaderRange = curIteratedRange.getCell(0, 0);
       curheaderRange.load("text");
       await context.sync();
       // Set chart tile and style
-      barChart.title.text = curheaderRange.text[0][0];
-      barChart.title.format.font.set({ size: fontSize_Title });
-      barChart.legend.set({ visible: false });
+      chart.title.text = curheaderRange.text[0][0];
+      chart.title.format.font.set({ size: fontSize_Title });
+      chart.legend.set({ visible: false });
 
       // Set Axis
-      let categoryAxis = barChart.axes.getItem(Excel.ChartAxisType.category);
+      let categoryAxis = chart.axes.getItem(Excel.ChartAxisType.category);
       categoryAxis.setCategoryNames(targetCategoryRange);
       categoryAxis.set({ visible: true });
       categoryAxis.format.font.set({ size: fontSize_CategoryName });
-      let valueAxis = barChart.axes.getItem(Excel.ChartAxisType.value);
+      let valueAxis = chart.axes.getItem(Excel.ChartAxisType.value);
       valueAxis.format.font.set({ size: fontSize_AxisValue });
 
-      let series = barChart.series.getItemAt(0);
+      let series = chart.series.getItemAt(0);
       series.set({ hasDataLabels: true, gapWidth: 30 });
       series.dataLabels.set({ showCategoryName: false, numberFormat: "#,##0" });
       series.dataLabels.format.font.set({ size: fontSize_DataLabel });
@@ -324,13 +386,13 @@ export async function CreateBarChart() {
 
       // Set data points color
       for (let i = 0; i < series.points.count; i++) {
-        // series.points.getItemAt(i).format.fill.setSolidColor(colorList[i % colorList.length]);
-        if(orientation === 1){
-          series.points.getItemAt(i).format.fill.setSolidColor(sortedColorArr[totalRowCount-pointItemsCount-1+i][0]);
-        }else{
+        if (orientation === 1) {
+          series.points
+            .getItemAt(i)
+            .format.fill.setSolidColor(sortedColorArr[totalRowCount - pointItemsCount - 1 + i][0]);
+        } else {
           series.points.getItemAt(i).format.fill.setSolidColor(sortedColorArr[i][0]);
         }
-
       }
       series.points.load();
 
@@ -342,23 +404,53 @@ export async function CreateBarChart() {
 }
 
 /**
- * play bar chart
+ * play for bar chart
  */
 export async function PlayBarChart() {
+  try {
+    await PlayBarOrColumnChart(barChartFlag);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+/**
+ * play for column chart
+ */
+export async function PlayColumnChart() {
+  try {
+    await PlayBarOrColumnChart(columnChartFlag);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+/**
+ * play bar or column chart
+ */
+export async function PlayBarOrColumnChart(flag: number) {
   try {
     await Excel.run(async context => {
       let dataSheet = context.workbook.worksheets.getActiveWorksheet();
       let table = dataSheet.tables.getItem(activeTableId);
 
       //get toolTable
-      let toolTable = dataSheet.tables.getItem("toolTable");
-      let categoryBodyRange = toolTable.columns.getItemAt(0).getDataBodyRange();
-      let curIteratedHeaderRange = toolTable.columns.getItemAt(1).getHeaderRowRange();
-      let curIteratedBodyRange = toolTable.columns.getItemAt(1).getDataBodyRange();
-      let mapBodyRange = toolTable.columns.getItem("mapColumn").getDataBodyRange();
-      let colorBodyRange = toolTable.columns.getItem("colorColumn").getDataBodyRange();
+      let toolSheet = context.workbook.worksheets.getItem(toolSheetName);
+      // let toolTable = dataSheet.tables.getItem(toolTableName);
+      let toolTable = toolSheet.tables.getItem(toolTableName);
 
-      let barChart = dataSheet.charts.getItem(barChartName);
+      let categoryBodyRange = toolTable.columns.getItemAt(ToolTableColumnIndex.category).getDataBodyRange();
+      let curIteratedHeaderRange = toolTable.columns.getItemAt(ToolTableColumnIndex.value).getHeaderRowRange();
+      let curIteratedBodyRange = toolTable.columns.getItemAt(ToolTableColumnIndex.value).getDataBodyRange();
+      let mapBodyRange = toolTable.columns.getItem(ToolTableColumnName.map).getDataBodyRange();
+      let colorBodyRange = toolTable.columns.getItem(ToolTableColumnName.color).getDataBodyRange();
+
+      let chart: Excel.Chart;
+      if (flag == barChartFlag) {
+        chart = dataSheet.charts.getItem(barChartName);
+      } else {
+        chart = dataSheet.charts.getItem(columnChartName);
+      }
       //todo splitIncreasement input
 
       categoryBodyRange.load("values");
@@ -402,15 +494,12 @@ export async function PlayBarChart() {
           if (step === splitIncreasement) {
             mapBodyRange.load("values");
             await context.sync();
-            //这里的mapRange是上一轮else中排过序的，要再拿一次，因为countryArr已经排序了
+            //The mapRange here is the one that was ordered in the previous 'else', and you'll have to take it again because countryArr already sorted.
             nextArr = mapTargetRangeValue(mapBodyRange, nextIteratedRange);
 
             for (let j = 0; j < totalRowCount - 1; ++j) {
               countryArray[j].setValue(nextArr[j][0]);
             }
-
-            // //sort
-            // countryArray.sort((a: Country, b: Country) => a.value - b.value);
             //set title
             curIteratedHeaderRange.copyFrom(nextIteratedHeaderRange);
           } else {
@@ -418,13 +507,10 @@ export async function PlayBarChart() {
             for (let j = 0; j < totalRowCount - 1; ++j) {
               countryArray[j].updateIncrease();
             }
-
-            // //sort
-            // countryArray.sort((a: Country, b: Country) => a.value - b.value);
           }
 
           //sort
-            countryArray.sort((a: Country, b: Country) => a.value - b.value); //countryArray only does ascending sort
+          countryArray.sort((a: Country, b: Country) => a.value - b.value); //countryArray only does ascending sort
 
           //set some value to excel Range
           let categoryArray = [];
@@ -433,8 +519,8 @@ export async function PlayBarChart() {
           let colorArray = [];
           for (let j = 0; j < totalRowCount - 1; ++j) {
             categoryArray.push([countryArray[j].name]);
-            valueArray.push([countryArray[j].value]); //该列必须存，chart用
-            mapArray.push([countryArray[j].mapColumn]); //该列用于行间映射
+            valueArray.push([countryArray[j].value]); //the chart will use this column
+            mapArray.push([countryArray[j].mapColumn]); //this column will be used to map row's number
             colorArray.push([countryArray[j].color]);
           }
           categoryBodyRange.values = categoryArray;
@@ -444,17 +530,17 @@ export async function PlayBarChart() {
           await context.sync();
 
           // Set data points color
-          let series = barChart.series.getItemAt(0);
+          let series = chart.series.getItemAt(0);
           series.load("points");
           colorBodyRange.load("values");
           await context.sync();
           let tmpColorArr = colorBodyRange.values;
-          for (let k = 0; k < series.points.count; k++) {   
-            // series.points.getItemAt(k).format.fill.setSolidColor(colorBodyRange.values[k][0]);
-            if(orientation === 1){
-              console.log(totalRowCount-pointItemsCount-1+k);
-              series.points.getItemAt(k).format.fill.setSolidColor(tmpColorArr[totalRowCount-pointItemsCount-1+k][0]);
-            }else{
+          for (let k = 0; k < series.points.count; k++) {
+            if (orientation === 1) {
+              series.points
+                .getItemAt(k)
+                .format.fill.setSolidColor(tmpColorArr[totalRowCount - pointItemsCount - 1 + k][0]);
+            } else {
               series.points.getItemAt(k).format.fill.setSolidColor(tmpColorArr[k][0]);
             }
           }
@@ -464,7 +550,7 @@ export async function PlayBarChart() {
 
         curIteratedHeaderRange.load("text");
         await context.sync();
-        barChart.title.text = curIteratedHeaderRange.text[0][0];
+        chart.title.text = curIteratedHeaderRange.text[0][0];
 
         await context.sync();
       }
@@ -485,11 +571,11 @@ function sleep(sleepTime: number) {
   }
 }
 
-function formatInput(input: string, rowCount: number): number{
+function formatInput(input: string, rowCount: number): number {
   let pointItemsCount = Number(input);
-  if(isNaN(pointItemsCount) || pointItemsCount <= 0 || pointItemsCount > rowCount || String(input).indexOf(".") >= 0){
+  if (isNaN(pointItemsCount) || pointItemsCount <= 0 || pointItemsCount > rowCount || String(input).indexOf(".") >= 0) {
     console.log("please input a integer");
-    pointItemsCount = rowCount-1;
+    pointItemsCount = rowCount - 1;
   }
   return pointItemsCount;
 }
@@ -498,16 +584,18 @@ function formatInput(input: string, rowCount: number): number{
  * @param originalRange : BodyRange
  * @param pointItemsCount : itemscount that u want
  */
-function getPartialRange(originalRange: Excel.Range, pointItemsCount: number ,orientation: number): Excel.Range{
+function getPartialRange(originalRange: Excel.Range, pointItemsCount: number, orientation: number): Excel.Range {
   let partialRange: Excel.Range;
-  if(orientation === 1){  //for top n
-    partialRange = originalRange.getCell(totalRowCount-pointItemsCount-1,0).getAbsoluteResizedRange(pointItemsCount,1);
-  }else{
-    partialRange = originalRange.getCell(0,0).getAbsoluteResizedRange(pointItemsCount,1);
+  if (orientation === 1) {
+    //for top n
+    partialRange = originalRange
+      .getCell(totalRowCount - pointItemsCount - 1, 0)
+      .getAbsoluteResizedRange(pointItemsCount, 1);
+  } else {
+    partialRange = originalRange.getCell(0, 0).getAbsoluteResizedRange(pointItemsCount, 1);
   }
 
   return partialRange;
-
 }
 
 // To calculate the increase for each step between next data list and current data list
@@ -517,7 +605,6 @@ function calculateIncrease(current: any[][], next: any[][], steps: number): any[
     console.error("Error! current data length:" + current.length + ", next data length" + next.length + ".");
   }
 
-  // let result = new Array(current.length);
   let result = [];
   for (let i = 0; i < current.length; i++) {
     let increasement = (next[i][0] - current[i][0]) / steps;
@@ -536,6 +623,11 @@ function mapTargetRangeValue(mapRange: Excel.Range, targetRange: Excel.Range): a
     targetArr.push([mapVal]);
   }
   return targetArr;
+}
+
+function hiddenSheet(sheet: Excel.Worksheet) {
+  sheet.set({ visibility: "Hidden" });
+  // sheet.set({ visibility: "Visible"});
 }
 
 class Country {
