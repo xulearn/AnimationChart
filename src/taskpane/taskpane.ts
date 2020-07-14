@@ -129,9 +129,11 @@ export async function CreateLineChart() {
         .getAbsoluteResizedRange(1, 2);
 
       let lineChart = dataSheet.charts.add(Excel.ChartType.line, initialRange, "Rows");
-      lineChart.set({
-        name: lineChartName
-      });
+      // lineChart.set({
+      //   name: lineChartName
+      // });
+      let lineChartHeight = chartHeight - 50;
+      lineChart.set({ name: lineChartName, height: lineChartHeight, width: chartWidth, left: chartLeft, top: chartTop });
       let categoryAxis = lineChart.axes.getItem(Excel.ChartAxisType.category);
       categoryAxis.setCategoryNames(initalCategoryName);
 
@@ -158,6 +160,7 @@ export async function CreateLineChart() {
           .points.getItemAt(1)
           .set(linePointSetLabel);
       }
+      lineChart.title.text = "LineChart";
       await context.sync();
     });
   } catch (error) {
@@ -185,14 +188,14 @@ export async function PlayLineChart() {
         .getCell(0, 1)
         .getAbsoluteResizedRange(1, 2);
 
-      for (let i = 4; i <= totalColumnCount; ++i) {
+      for (let i = 4; i <= totalColumnCount; ++i) { // 4th column
         //todo!!
         //from the forth column
 
         let resizedRange = initialRange.getAbsoluteResizedRange(totalRowCount, i); //Translate one column unit to the right.
 
         //todo: do not use sleep
-        sleep(1000);
+        // sleep(1000);
         lineChart.setData(resizedRange, "Rows"); //dynamic change chart
 
         //set categoryName

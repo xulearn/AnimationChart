@@ -78,3 +78,7 @@
 b {
     font-weight: bold;
 }
+
+.content {
+    float: left;
+}
