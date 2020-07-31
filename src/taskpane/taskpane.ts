@@ -6,24 +6,26 @@
 /* global console, document, Excel, Office */
 
 // Internal used const. DO NOT CHANGE
-import * as Ivy from "@ms/charts";
+// import * as Ivy from "@ms/charts";
 
 // import {CommonField,BarChartField, ColumnChartField, LineChartField} from "../utils/constants";
 // import * as Tool from "../utils/tools";
-import { CreateLineChart, PlayLineChart } from "../utils/lineChart";
+// import { CreateLineChart, PlayLineChart } from "../utils/lineChart";
+
+// import {LineCopyChart, PlayCopyLine} from "../utils/lineCopyChart";
+// import {DynamicSpace4Line, PlayNewLine} from "../utils/lineDynamicStep";
+
 import { CreateBarChart, PlayBarChart } from "../utils/barChart";
 import { CreateColumnChart, PlayColumnChart } from "../utils/columnChart";
-import {LineCopyChart, PlayCopyLine} from "../utils/lineCopyChart";
-import {DynamicSpace4Line, PlayNewLine} from "../utils/lineDynamicStep";
-
 
 Office.onReady(info => {
   if (info.host === Office.HostType.Excel) {
     document.getElementById("sideload-msg").style.display = "none";
     document.getElementById("app-body").style.display = "flex";
     //line chart
-    document.getElementById("createLineChart").onclick = CreateLineChart;
-    document.getElementById("playLineChart").onclick = PlayLineChart;
+    // document.getElementById("createLineChart").onclick = CreateLineChart;
+    // document.getElementById("playLineChart").onclick = PlayLineChart;
+    
     //bar chart
     document.getElementById("createBarChart").onclick = CreateBarChart;
     document.getElementById("playBarChart").onclick = PlayBarChart;
@@ -31,13 +33,13 @@ Office.onReady(info => {
     document.getElementById("createColumnChart").onclick = CreateColumnChart;
     document.getElementById("playColumnChart").onclick = PlayColumnChart;
 
-    // new line chart
-    document.getElementById("lineCopyChart").onclick = LineCopyChart;
-    document.getElementById("playCopyLine").onclick = PlayCopyLine;
+    // // new line chart
+    // document.getElementById("lineCopyChart").onclick = LineCopyChart;
+    // document.getElementById("playCopyLine").onclick = PlayCopyLine;
 
-    // new line chart
-    document.getElementById("dynamicSpace4Line").onclick = DynamicSpace4Line;
-    document.getElementById("playNewLine").onclick = PlayNewLine;
+    // // new line chart
+    // document.getElementById("dynamicSpace4Line").onclick = DynamicSpace4Line;
+    // document.getElementById("playNewLine").onclick = PlayNewLine;
 
   }
 });

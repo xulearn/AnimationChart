@@ -42,25 +42,25 @@ export module CommonField {
 
   // Internal used const. DO NOT CHANGE
   //for barChart and columnChart and tool
-  export const toolSheetName = "toolSheet"; //+UUID
-  export const toolTableName = "toolTable"; //+UUID
+  export const toolSheetName = "toolSheet9527"; //+UUID
+  export const toolTableName = "toolTable9527"; //+UUID
 }
 
 export module LineChartField {
   //for line chart
-  export let lineChartName = "LineChartName";
+  export let lineChartName = "LineChartName9527";
   export let linePointSetLabel;
   export let linePointUnsetLabel;
   // let seriesUpdate;
 }
 
 export module BarChartField {
-  export const barChartName = "BarChartName";
+  export const barChartName = "BarChartName9527";
   export const barChartFlag = 1;
 }
 
 export module ColumnChartField {
-  export const columnChartName = "ColumnChartName";
+  export const columnChartName = "ColumnChartName9527";
   export const columnChartFlag = 2;
 }
 

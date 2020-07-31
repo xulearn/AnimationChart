@@ -5,9 +5,9 @@
   <ProviderName>Contoso</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="AnimationChart"/>
-  <Description DefaultValue="A template to get started."/>
-  <IconUrl DefaultValue="https://localhost:3000/assets/icon3.png"/>
-  <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/icon2.png"/>
+  <Description DefaultValue="Dynamic chart presentation of data."/>
+  <IconUrl DefaultValue="https://localhost:3000/assets/Icon32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/Icon80.png"/>
   <SupportUrl DefaultValue="https://www.contoso.com/help"/>
   <AppDomains>
     <AppDomain>contoso.com</AppDomain>
@@ -65,9 +65,9 @@
         <!-- <bt:Image id="Icon.16x16" DefaultValue="https://localhost:3000/assets/icon-16.png"/>
         <bt:Image id="Icon.32x32" DefaultValue="https://localhost:3000/assets/icon-32.png"/>
         <bt:Image id="Icon.80x80" DefaultValue="https://localhost:3000/assets/icon-80.png"/> -->
-        <bt:Image id="Icon.16x16" DefaultValue="https://localhost:3000/assets/icon4.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://localhost:3000/assets/icon3.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://localhost:3000/assets/icon2.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://localhost:3000/assets/Icon16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://localhost:3000/assets/Icon32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://localhost:3000/assets/Icon80.png"/>
 
       </bt:Images>
       <bt:Urls>
@@ -81,7 +81,7 @@
         <bt:String id="TaskpaneButton.Label" DefaultValue="Animation Chart"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="GetStarted.Description" DefaultValue="Your sample add-in loaded succesfully. Go to the HOME tab and click the 'Show Taskpane' button to get started."/>
+        <bt:String id="GetStarted.Description" DefaultValue="Your add-in loaded succesfully."/>
         <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Click to Show a Taskpane"/>
       </bt:LongStrings>
     </Resources>

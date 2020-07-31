@@ -54,6 +54,9 @@ export async function CreateBarOrColumnChart(flag: number) {
       }
       toolSheet = context.workbook.worksheets.add(CommonField.toolSheetName);
 
+      Tool.hiddenSheet(toolSheet);
+      await context.sync();
+
       let toolRange = toolSheet.getCell(0, 0).getAbsoluteResizedRange(CommonField.totalRowCount, 4);
       let toolTable = toolSheet.tables.add(toolRange, true);
       toolTable.set({
