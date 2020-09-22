@@ -2,6 +2,10 @@ import { CommonField, BarChartField, ColumnChartField, ToolTableField } from "./
 import { Country } from "./country";
 import * as Tool from "./tools";
 
+let countryArray: Country[] = [];
+// let sortedColorArr = [];
+// let sortedMapArray = [];
+
 /**
  * create for bar or column chart
  */
@@ -54,10 +58,10 @@ export async function CreateBarOrColumnChart(flag: number) {
       }
       toolSheet = context.workbook.worksheets.add(CommonField.toolSheetName);
 
-      Tool.hiddenSheet(toolSheet);
+      // Tool.hiddenSheet(toolSheet);
       await context.sync();
 
-      let toolRange = toolSheet.getCell(0, 0).getAbsoluteResizedRange(CommonField.totalRowCount, 4);
+      let toolRange = toolSheet.getCell(0, 0).getAbsoluteResizedRange(CommonField.totalRowCount, 2);
       let toolTable = toolSheet.tables.add(toolRange, true);
       toolTable.set({
         name: CommonField.toolTableName
@@ -66,40 +70,76 @@ export async function CreateBarOrColumnChart(flag: number) {
       toolTable.columns
         .getItemAt(ToolTableField.ToolTableColumnIndex.category)
         .set({ name: ToolTableField.ToolTableColumnName.category });
-      toolTable.columns
-        .getItemAt(ToolTableField.ToolTableColumnIndex.color)
-        .set({ name: ToolTableField.ToolTableColumnName.color });
-      toolTable.columns
-        .getItemAt(ToolTableField.ToolTableColumnIndex.map)
-        .set({ name: ToolTableField.ToolTableColumnName.map });
+      // toolTable.columns
+      //   .getItemAt(ToolTableField.ToolTableColumnIndex.map)
+      //   .set({ name: ToolTableField.ToolTableColumnName.map });
+      // toolTable.columns
+      //   .getItemAt(ToolTableField.ToolTableColumnIndex.color)
+      //   .set({ name: ToolTableField.ToolTableColumnName.color });
+      // toolTable.columns
+      //   .getItemAt(ToolTableField.ToolTableColumnIndex.map)
+      //   .set({ name: ToolTableField.ToolTableColumnName.map });
 
       let categoryBodyRange = toolTable.columns.getItem(ToolTableField.ToolTableColumnName.category).getDataBodyRange();
       let curIteratedRange = toolTable.columns.getItemAt(ToolTableField.ToolTableColumnIndex.value).getRange();
       let curIteratedBodyRange = toolTable.columns
         .getItemAt(ToolTableField.ToolTableColumnIndex.value)
         .getDataBodyRange();
-      let colorBodyRange = toolTable.columns.getItem(ToolTableField.ToolTableColumnName.color).getDataBodyRange();
-      let mapBodyRange = toolTable.columns.getItem(ToolTableField.ToolTableColumnName.map).getDataBodyRange();
+      // let colorBodyRange = toolTable.columns.getItem(ToolTableField.ToolTableColumnName.color).getDataBodyRange();
+      // let mapBodyRange = toolTable.columns.getItem(ToolTableField.ToolTableColumnName.map).getDataBodyRange();
 
       //copy Range
       categoryBodyRange.copyFrom(table.columns.getItemAt(0).getDataBodyRange());
       curIteratedRange.copyFrom(table.columns.getItemAt(1).getRange()); //copy headers too
 
-      colorBodyRange.load("values");
+      // colorBodyRange.load("values");
       await context.sync();
       let tmpColorArr = [];
       for (let i = 0; i < CommonField.totalRowCount - 1; ++i) {
         tmpColorArr.push([CommonField.colorList[i % CommonField.colorList.length]]);
       }
-      colorBodyRange.values = tmpColorArr;
+      // colorBodyRange.values = tmpColorArr;
 
-      mapBodyRange.load("values");
-      await context.sync();
+      // mapBodyRange.load("values");
+      // await context.sync();
       let tmpMapArr = [];
       for (let i = 1; i < CommonField.totalRowCount; ++i) {
         tmpMapArr.push([i]);
       }
-      mapBodyRange.values = tmpMapArr;
+      // mapBodyRange.values = tmpMapArr;
+
+      categoryBodyRange.load("values");
+      curIteratedBodyRange.load("values");
+      await context.sync();
+
+      let tmpCountryArray: Country[] = [];
+      for (let i = 0; i < CommonField.totalRowCount - 1; ++i) {
+        let curCategory = categoryBodyRange.values[i][0];
+        let curValue = curIteratedBodyRange.values[i][0];
+        let curMap = tmpMapArr[i][0];
+        let curColor = tmpColorArr[i][0];
+
+        let curCountry = new Country(curCategory, curValue, curMap, 0, curColor);
+        tmpCountryArray.push(curCountry);
+      }
+      tmpCountryArray.sort((a: Country, b: Country) => a.value - b.value); //countryArray only does ascending sort
+      
+      countryArray = tmpCountryArray;
+
+      //set some value to excel Range
+      let categoryArray = [];
+      let valueArray = [];
+      let sortedColorArr = [];
+      let sortedMapArray = [];
+      for (let j = 0; j < CommonField.totalRowCount - 1; ++j) {
+        categoryArray.push([countryArray[j].name]);
+        valueArray.push([countryArray[j].value]); //the chart will use this column
+        sortedColorArr.push([countryArray[j].color]);
+        sortedMapArray.push([countryArray[j].mapColumn]);
+      }
+      categoryBodyRange.values = categoryArray;
+      curIteratedBodyRange.values = valueArray;
+      await context.sync();
 
       //input
       let inputElement = document.getElementById("PointItems") as HTMLInputElement;
@@ -122,7 +162,7 @@ export async function CreateBarOrColumnChart(flag: number) {
       );
 
       // Create Chart
-      toolTable.sort.apply([{ key: 1, ascending: true }], true); //toolTable only does ascending sort
+      // toolTable.sort.apply([{ key: 1, ascending: true }], true); //toolTable only does ascending sort
       let chart: Excel.Chart;
       if (flag === BarChartField.barChartFlag) {
         chart = dataSheet.charts.add(Excel.ChartType.barClustered, targetIteratedBodyRange);
@@ -165,25 +205,37 @@ export async function CreateBarOrColumnChart(flag: number) {
       series.dataLabels.set({ showCategoryName: false, numberFormat: "#,##0" });
       series.dataLabels.format.font.set({ size: CommonField.fontSize_DataLabel });
       series.points.load();
+      let chartPoints = series.points;
+      chartPoints.load("items");
       await context.sync();
 
-      colorBodyRange.load("values");
-      await context.sync();
-      let sortedColorArr = colorBodyRange.values;
+      // colorBodyRange.load("values");
+      // await context.sync();
+      // let sortedColorArr = colorBodyRange.values;
 
-      // Set data points color
-      for (let i = 0; i < series.points.count; i++) {
+      let piontItems = chartPoints.items;
+      let len = piontItems.length;
+      for(let i = 0;i<len;++i){
         if (CommonField.orientation === 1) {
-          series.points
-            .getItemAt(i)
-            .format.fill.setSolidColor(
-              sortedColorArr[CommonField.totalRowCount - CommonField.pointItemsCount - 1 + i][0]
-            );
-        } else {
-          series.points.getItemAt(i).format.fill.setSolidColor(sortedColorArr[i][0]);
+          piontItems[i].format.fill.setSolidColor(sortedColorArr[CommonField.totalRowCount - CommonField.pointItemsCount - 1 + i][0]);
+        }else{
+          piontItems[i].format.fill.setSolidColor(sortedColorArr[i][0]);
         }
       }
-      series.points.load();
+
+      // Set data points color
+      // for (let i = 0; i < series.points.count; i++) {
+      //   if (CommonField.orientation === 1) {
+      //     series.points
+      //       .getItemAt(i)
+      //       .format.fill.setSolidColor(
+      //         sortedColorArr[CommonField.totalRowCount - CommonField.pointItemsCount - 1 + i][0]
+      //       );
+      //   } else {
+      //     series.points.getItemAt(i).format.fill.setSolidColor(sortedColorArr[i][0]);
+      //   }
+      // }
+      // series.points.load();
 
       await context.sync();
     });
@@ -198,9 +250,9 @@ export async function CreateBarOrColumnChart(flag: number) {
 export async function PlayBarOrColumnChart(flag: number) {
   try {
     await Excel.run(async context => {
-      console.log(CommonField.inputPointItems);
-      console.log(CommonField.orientation);
-      console.log(CommonField.pointItemsCount);
+      // console.log(CommonField.inputPointItems);
+      // console.log(CommonField.orientation);
+      // console.log(CommonField.pointItemsCount);
 
       let dataSheet = context.workbook.worksheets.getActiveWorksheet();
       let table = dataSheet.tables.getItem(CommonField.activeTableId);
@@ -219,8 +271,8 @@ export async function PlayBarOrColumnChart(flag: number) {
       let curIteratedBodyRange = toolTable.columns
         .getItemAt(ToolTableField.ToolTableColumnIndex.value)
         .getDataBodyRange();
-      let mapBodyRange = toolTable.columns.getItem(ToolTableField.ToolTableColumnName.map).getDataBodyRange();
-      let colorBodyRange = toolTable.columns.getItem(ToolTableField.ToolTableColumnName.color).getDataBodyRange();
+      // let mapBodyRange = toolTable.columns.getItem(ToolTableField.ToolTableColumnName.map).getDataBodyRange();
+      // let colorBodyRange = toolTable.columns.getItem(ToolTableField.ToolTableColumnName.color).getDataBodyRange();
 
       let chart: Excel.Chart;
       if (flag == BarChartField.barChartFlag) {
@@ -232,34 +284,44 @@ export async function PlayBarOrColumnChart(flag: number) {
 
       categoryBodyRange.load("values");
       curIteratedBodyRange.load("values");
-      mapBodyRange.load("values");
-      colorBodyRange.load("values");
+      // mapBodyRange.load("values");
+      // colorBodyRange.load("values");
       await context.sync();
 
       //initial countryArr
-      let countryArray: Country[] = [];
-      for (let i = 0; i < CommonField.totalRowCount - 1; ++i) {
-        let curCategory = categoryBodyRange.values[i][0];
-        let curValue = curIteratedBodyRange.values[i][0];
-        let curMap = mapBodyRange.values[i][0];
-        let curColor = colorBodyRange.values[i][0];
+      // let countryArray: Country[] = [];
+      // for (let i = 0; i < CommonField.totalRowCount - 1; ++i) {
+      //   let curCategory = categoryBodyRange.values[i][0];
+      //   let curValue = curIteratedBodyRange.values[i][0];
+      //   let curMap = mapBodyRange.values[i][0];
+      //   let curColor = colorBodyRange.values[i][0];
 
-        let curCountry = new Country(curCategory, curValue, curMap, 0, curColor);
-        countryArray.push(curCountry);
-      }
+      //   let curCountry = new Country(curCategory, curValue, curMap, 0, curColor);
+      //   countryArray.push(curCountry);
+      // }
 
       // paly
       for (let i = 2; i < CommonField.totalColumnCount; ++i) {
+
+        let log1 = new Date().getTime();
+
         let nextIteratedHeaderRange = table.columns.getItemAt(i).getHeaderRowRange(); //from table
         let nextIteratedRange = table.columns.getItemAt(i).getRange();
 
         nextIteratedRange.load("values");
         curIteratedBodyRange.load("values");
         curIteratedHeaderRange.load("text");
-        mapBodyRange.load("values");
+        // mapBodyRange.load("values");
         await context.sync();
 
-        let nextArr = Tool.mapTargetRangeValue(mapBodyRange, nextIteratedRange);
+        let tmpOutMapArr = [];
+        for(let j = 0; j < CommonField.totalRowCount - 1; ++j){
+          tmpOutMapArr.push([countryArray[j].mapColumn]);
+        }
+
+        // let nextArr = Tool.mapTargetRangeValue(mapBodyRange, nextIteratedRange);
+        let nextArr = Tool.mapTargetValue(tmpOutMapArr, nextIteratedRange);
+
         // Calculate increase based on current value and next value
         let increaseData = Tool.calculateIncrease(curIteratedBodyRange.values, nextArr, CommonField.splitIncreasement);
 
@@ -268,11 +330,17 @@ export async function PlayBarOrColumnChart(flag: number) {
         }
 
         for (let step = 1; step <= CommonField.splitIncreasement; step++) {
+          
           if (step === CommonField.splitIncreasement) {
-            mapBodyRange.load("values");
-            await context.sync();
+            let tmpInMapArr = [];
+            for(let j = 0; j < CommonField.totalRowCount - 1; ++j){
+              tmpInMapArr.push([countryArray[j].mapColumn]);
+            }
+            // mapBodyRange.load("values");
+            // await context.sync();
             //The mapRange here is the one that was ordered in the previous 'else', and you'll have to take it again because countryArr already sorted.
-            nextArr = Tool.mapTargetRangeValue(mapBodyRange, nextIteratedRange);
+            // nextArr = Tool.mapTargetRangeValue(mapBodyRange, nextIteratedRange);
+            nextArr = Tool.mapTargetValue(tmpInMapArr, nextIteratedRange);
 
             for (let j = 0; j < CommonField.totalRowCount - 1; ++j) {
               countryArray[j].setValue(nextArr[j][0]);
@@ -292,45 +360,63 @@ export async function PlayBarOrColumnChart(flag: number) {
           //set some value to excel Range
           let categoryArray = [];
           let valueArray = [];
-          let mapArray = [];
+          // let mapArray = [];
           let colorArray = [];
           for (let j = 0; j < CommonField.totalRowCount - 1; ++j) {
             categoryArray.push([countryArray[j].name]);
             valueArray.push([countryArray[j].value]); //the chart will use this column
-            mapArray.push([countryArray[j].mapColumn]); //this column will be used to map row's number
+            // mapArray.push([countryArray[j].mapColumn]); //this column will be used to map row's number
             colorArray.push([countryArray[j].color]);
           }
           categoryBodyRange.values = categoryArray;
           curIteratedBodyRange.values = valueArray;
-          mapBodyRange.values = mapArray;
-          colorBodyRange.values = colorArray;
+          // mapBodyRange.values = mapArray;
+          // colorBodyRange.values = colorArray;
           await context.sync();
 
           // Set data points color
           let series = chart.series.getItemAt(0);
-          series.load("points");
-          colorBodyRange.load("values");
+          // series.load("points");
+          // // colorBodyRange.load("values");
+          // await context.sync();
+          // // let tmpColorArr = colorBodyRange.values;
+          // for (let k = 0; k < series.points.count; k++) {
+          //   if (CommonField.orientation === 1) {
+          //     series.points
+          //       .getItemAt(k)
+          //       .format.fill.setSolidColor(
+          //         colorArray[CommonField.totalRowCount - CommonField.pointItemsCount - 1 + k][0]
+          //       );
+          //   } else {
+          //     series.points.getItemAt(k).format.fill.setSolidColor(colorArray[k][0]);
+          //   }
+          // }
+          // series.points.load();
+
+          let chartPoints = series.points;
+          chartPoints.load("items");
           await context.sync();
-          let tmpColorArr = colorBodyRange.values;
-          for (let k = 0; k < series.points.count; k++) {
+          let piontItems = chartPoints.items;
+          let len = piontItems.length;
+          for(let i = 0;i<len;++i){
             if (CommonField.orientation === 1) {
-              series.points
-                .getItemAt(k)
-                .format.fill.setSolidColor(
-                  tmpColorArr[CommonField.totalRowCount - CommonField.pointItemsCount - 1 + k][0]
-                );
-            } else {
-              series.points.getItemAt(k).format.fill.setSolidColor(tmpColorArr[k][0]);
+              piontItems[i].format.fill.setSolidColor(colorArray[CommonField.totalRowCount - CommonField.pointItemsCount - 1 + i][0]);
+            }else{
+              piontItems[i].format.fill.setSolidColor(colorArray[i][0]);
             }
           }
-          series.points.load();
           await context.sync();
+
         }
 
         curIteratedHeaderRange.load("text");
-        await context.sync();
+        await context.sync();  //有这个，cost*2；；；没有则越过step=1这 一次（被覆盖了）只有step=2这一次，且cost达到2000多毫秒，且title和数据对不上，且正常列的情况也有略过（还是被覆盖（更可能）？）的情况
         chart.title.text = curIteratedHeaderRange.text[0][0];
         await context.sync();
+
+        let log2 = new Date().getTime();
+        console.log(log2-log1);
+
       }
 
       await context.sync();

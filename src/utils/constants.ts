@@ -68,8 +68,9 @@ export module ToolTableField {
   export enum ToolTableColumnIndex {
     category = 0,
     value = 1,
-    color = 2,
-    map = 3
+    // map = 2
+    // color = 2,
+    // map = 3
   }
 
   export enum ToolTableColumnName {

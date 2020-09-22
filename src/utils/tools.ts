@@ -64,6 +64,16 @@ export function mapTargetRangeValue(mapRange: Excel.Range, targetRange: Excel.Ra
   return targetArr;
 }
 
+export function mapTargetValue(mapArr: any[][], targetRange: Excel.Range): any[][] {
+  let targetArr = [];
+  for (let j = 0; j < mapArr.length; ++j) {
+    let mapIndex = mapArr[j][0];
+    let mapVal = targetRange.values[mapIndex][0];
+    targetArr.push([mapVal]);
+  }
+  return targetArr;
+}
+
 export function hiddenSheet(sheet: Excel.Worksheet):void {
   sheet.set({ visibility: "Hidden" });
   // sheet.set({ visibility: "Visible"});

@@ -10,10 +10,10 @@ import * as Ivy from "@ms/charts";
 
 import {CommonField,BarChartField, ColumnChartField, LineChartField} from "../utils/constants";
 import * as Tool from "../utils/tools";
-// import { CreateLineChart, PlayLineChart } from "../utils/lineChart";
+import { CreateLineChart, PlayLineChart } from "../utils/lineChart";
 
-// import {LineCopyChart, PlayCopyLine} from "../utils/lineCopyChart";
-// import {DynamicSpace4Line, PlayNewLine} from "../utils/lineDynamicStep";
+import {LineCopyChart, PlayCopyLine} from "../utils/lineCopyChart";
+import {DynamicSpace4Line, PlayNewLine} from "../utils/lineDynamicStep";
 
 import { CreateBarChart, PlayBarChart } from "../utils/barChart";
 import { CreateColumnChart, PlayColumnChart } from "../utils/columnChart";
@@ -42,8 +42,8 @@ Office.onReady(info => {
     document.getElementById("sideload-msg").style.display = "none";
     document.getElementById("app-body").style.display = "flex";
     //line chart
-    // document.getElementById("createLineChart").onclick = CreateLineChart;
-    // document.getElementById("playLineChart").onclick = PlayLineChart;
+    document.getElementById("createLineChart").onclick = CreateLineChart;
+    document.getElementById("playLineChart").onclick = PlayLineChart;
     
     //bar chart
     document.getElementById("createBarChart").onclick = CreateBarChart;
@@ -53,19 +53,19 @@ Office.onReady(info => {
     document.getElementById("playColumnChart").onclick = PlayColumnChart;
 
     // // new line chart
-    // document.getElementById("lineCopyChart").onclick = LineCopyChart;
-    // document.getElementById("playCopyLine").onclick = PlayCopyLine;
+    document.getElementById("lineCopyChart").onclick = LineCopyChart;
+    document.getElementById("playCopyLine").onclick = PlayCopyLine;
 
-    // // new line chart
-    // document.getElementById("dynamicSpace4Line").onclick = DynamicSpace4Line;
-    // document.getElementById("playNewLine").onclick = PlayNewLine;
+    // new line chart
+    document.getElementById("dynamicSpace4Line").onclick = DynamicSpace4Line;
+    document.getElementById("playNewLine").onclick = PlayNewLine;
 
     // slide window line chart
-    // document.getElementById("test1").onclick = test1;
-    // document.getElementById("test2").onclick = test2;
+    document.getElementById("test1").onclick = test1;
+    document.getElementById("test2").onclick = test2;
 
     //ivychart
-    // document.getElementById("test3").onclick = test3;
+    document.getElementById("test3").onclick = test3;
 
 
 
@@ -359,9 +359,9 @@ function layoutChart(): void {
       values: ivyValues
     },
     id: "Series1",
-    // layout: "Bar Clustered"
+    layout: "Bar Clustered"
     // layout: "Column Clustered"
-    layout: "Line"
+    // layout: "Line"
 
   };
   let myColor: IColor = {
@@ -398,6 +398,7 @@ function layoutChart(): void {
 
 export async function test3() {
   await HandleIvy();
+  console.log(1);
   layoutChart();
   //pageRoot.addEventListener("resize", () => layoutChart());
 }
